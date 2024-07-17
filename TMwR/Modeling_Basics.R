@@ -27,7 +27,7 @@ ames_test <- testing(ames_split)
 # Model Fitting -----------------------------------------------------------
 # Create model: 
 # Linear regression 
-linear_reg() |> set_engine('lm') |> translate() # To see parsnip code mapping to package syntax 
+linear_reg() |> set_engine('lm') |> translate() # To see how parsnip maps code to package syntax 
 
 lm_model <- linear_reg() |> set_engine('lm')
 lm_form_fit <- lm_model |> fit(Sale_Price ~ Longitude + Latitude, data = ames_train)
@@ -71,4 +71,52 @@ ames_test_small |>  select(Sale_Price) |>
 
 
 # parsnip_addin() helps with model specs 
+
+
+# Model Workflow ----------------------------------------------------------
+lm_wflow <- workflow() |> 
+  add_model(lm_model) |>  # Workflow requires parsnip object 
+  add_formula(Sale_Price ~ Longitude + Latitude) # Set formula as pre-processor 
+lm_wflow
+
+lm_fit <- fit(lm_wflow, ames_train) # Fit model from workflow 
+lm_fit
+
+# Make predictions, change pre-processing, etc. 
+predict(lm_fit, ames_test |> slice_head(n = 3)) 
+lm_fit |> update_formula(Sale_Price ~ Longitude)
+
+# Incorporating raw variables  
+lm_wflow <- lm_wflow |> 
+  remove_formula() |> 
+  add_variables(outcomes = Sale_Price, predictors = c(Longitude, Latitude))
+  # Could also use general helper functions since outcomes automatically dropped from predictors
+lm_wflow 
+
+fit(lm_wflow, ames_train) # So, add formula or variables as pre-processor depending on chosen model specs 
+
+# Understanding workflow() formula processing -- considers model-specific formulas 
+# Emulates how underlying model would treat formula whenever possible 
+# Sometimes have special cases (e.g., lme4 and random effects)
+library(nlme)
+library(multilevelmod) # Parsnip extension 
+
+multilevel_spec <- linear_reg() %>% set_engine("lmer")
+
+multilevel_wflow <- workflow() |> 
+  add_variables(outcome = distance, predictors = c(Sex, age, Subject)) |> 
+  #Specify model formula given column names from add_variables()
+  add_model(multilevel_spec, formula = distance ~ Sex + (age | Subject)) 
+
+multilevel_fit <- fit(multilevel_wflow, data = Orthodont)
+multilevel_fit
+
+# Would also use model-specific formula for survival analysis using strata()
+# parametric_spec <- survival reg() 
+# parametric_wflow <- 
+# 
+
+# Creating multiple workflows (e.g., for easily testing multiple options)
+
+
 
