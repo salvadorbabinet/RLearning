@@ -1,9 +1,10 @@
 # Tidy Modeling with R (Desktop Version) 
-# Modeling Basics 
+# Modeling Basics
 library(tidymodels)
 tidymodels_prefer()
 data(ames)
 
+# Data --------------------------------------------------------------------
 ames
 glimpse(ames)
 
@@ -100,6 +101,7 @@ fit(lm_wflow, ames_train) # So, add formula or variables as pre-processor depend
 # Sometimes have special cases (e.g., lme4 and random effects)
 library(nlme)
 library(multilevelmod) # Parsnip extension 
+tidymodels_prefer()
 
 multilevel_spec <- linear_reg() %>% set_engine("lmer")
 
@@ -111,12 +113,38 @@ multilevel_wflow <- workflow() |>
 multilevel_fit <- fit(multilevel_wflow, data = Orthodont)
 multilevel_fit
 
-# Would also use model-specific formula for survival analysis using strata()
+# Would also use model-specific formula for survival analysis 
 # parametric_spec <- survival reg() 
 # parametric_wflow <- 
 # 
 
-# Creating multiple workflows (e.g., for easily testing multiple options)
+# Creating multiple workflows via workflowsets (e.g., for easily testing multiple options)
+# More thorough consideration in 15: Model Screening
+location <- list(
+  longitude = Sale_Price ~ Longitude,
+  latitude = Sale_Price ~ Latitude,
+  coords = Sale_Price ~ Longitude + Latitude,
+  neighborhood = Sale_Price ~ Neighborhood
+)
 
+location_models <- workflow_set(preproc = location, models = list(lm = lm_model))
+location_models # Can see workflow ID to pick out with extract()
+extract_workflow(location_models, id = 'coords_lm')
+
+location_models <- location_models |> mutate(fit = map(info, ~ fit(.x$workflow[[1]], ames_train)))
+location_models
+location_models$fit[[1]]
+
+# Test set evaluation using last_fit() -- see 16: Dimensionality Reduction 
+final_lm_res <- last_fit(lm_wflow, ames_split) # Convenience wrapper for entire dataset 
+final_lm_res 
+
+# Fitted workflow in .workflow, also have metrics and predictions -- use extract() or collect()
+extract_workflow(final_lm_res)
+collect_metrics(final_lm_res)
+collect_predictions(final_lm_res)
+
+
+# Feature Engineering -----------------------------------------------------
 
 
