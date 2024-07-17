@@ -1,4 +1,4 @@
-# Tidy Modeling with R (Desktop Version) 
+# Tidy Modeling with R 
 # Modeling Basics
 library(tidymodels)
 tidymodels_prefer()
