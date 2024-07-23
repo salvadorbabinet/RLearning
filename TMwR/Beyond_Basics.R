@@ -43,10 +43,12 @@ beans_rec <- recipe(class ~ ., data = bean_train) |>
 beans_rec
 
 # Training: recipe prep() is analogous to modeling fit() 
+# Calculate statistics from training set 
 beans_rec_trained <- prep(beans_rec) # retain; verbose / log_changes args can be useful
 beans_rec_trained  
 
 # Processing: recipe bake() is analogous to modeling predict()
+# Apply pre-processing (based on training set) to new data set 
 beans_val_processed <- bake(beans_rec_trained, new_data = bean_validation)
 beans_val_processed
 
@@ -66,17 +68,34 @@ p2 <- beans_val_processed |>
 p1 + p2 # Using patchwork  
 
 # Feature extraction 
+# Estimate transformation and visualize via scatter plot matrix 
 plot_validation_results <- function(recipe, dat = bean_validation) {
   recipe |> 
-    prep() |> 
-    bake(new_data = dat) |> 
+    prep() |> # Estimate parameters 
+    bake(new_data = dat) |> # Process data (with validation set unless specified)
     ggplot(aes(x = .panel_x, y = .panel_y, color = class, fill = class)) +
     geom_point(alpha = 0.5, size = 0.5) +
     geom_autodensity(alpha = 0.3) +
     facet_matrix(vars(-class), layer.diag = 2) +
-    scale_color_brewer() + 
-    scale_fill_brewer()
+    scale_color_brewer(palette = 'Dark2') + 
+    scale_fill_brewer(palette = 'Dark2')
 }
   
+bean_rec_trained |> 
+  step_pca(all_numeric_predictors(), num_comp = 4) |> 
+  plot_validation_results() + 
+  ggtitle("Principal Component Analysis")
 
+# Investigating PCA further 
+beans_pca_estimates <- beans_rec_trained |> 
+  step_pca(all_numeric_predictors(), num_comp = 4) |> # Uses stats::prcomp() 
+  prep() # Generates PCA info within pca step of recipe object 
+
+pca_extract <- beans_pca_estimates$steps[[4]] |> # Subset PCA step 
+  tidy() |> 
+  mutate(component = parse_number(component))
+  
+pca_extract |> 
+  group_by(component) |> 
+  slice_max(abs(value), n = 3) # Print loadings -- equiv. to deprecated learntidymodels function 
 
